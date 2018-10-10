@@ -10,13 +10,15 @@ import pandas as pd
 from vocab import Vocab
 from  Utility import nextIteration
 from LSTMRNNModel import QGLSTMRNNModel, Config
+import matplotlib.pyplot as plt
 
-DIR='./model'
+DIR = './model'
+Loss_DIR='./loss'
+
 class QG(object):
-
     def __init__(self):
-        self.vocab=Vocab()
-        #self.add_variables()
+        self.vocab = Vocab()
+        # self.add_variables()
 
     # def add_variables(self):
     #     self.input_placeholder = tf.placeholder(dtype=tf.int32, shape=(None, None))
@@ -139,7 +141,7 @@ class QG(object):
 
     def load_data(self, data_file):
         df = pd.read_csv(data_file)
-        df= df.replace(np.nan,'null',regex=True)
+        df = df.replace(np.nan, 'null', regex=True)
         # df['Answer'] = df.Answer.apply(
         #     lambda row: self.vocab.encode_list(nltk.word_tokenize(row)))
         df['Question'] = df.Question.apply(lambda row: self.vocab.encode_list(nltk.word_tokenize(row)))
@@ -150,50 +152,60 @@ class QG(object):
 
     def run(self):
 
-        df=self.load_data('SQUAD.csv')
-        config=Config()
-        model=QGLSTMRNNModel(config)
-        model=model.get_model()
-        with tf.Session() as sess:
-            if not os.path.isdir(DIR):
-                os.mkdir(DIR)
-            saver = tf.train.Saver()
-            ckpt = tf.train.get_checkpoint_state(os.path.dirname(DIR+'/checkpoint'))
+        df = self.load_data('SQUAD.csv')
+        config = Config()
+        model = QGLSTMRNNModel(config)
+        model = model.get_model()
 
-            merged = tf.summary.merge_all()
-            train_writer = tf.summary.FileWriter('./', sess.graph)
+        if not os.path.isdir(DIR):
+            os.mkdir(DIR)
+        if not os.path.isdir(Loss_DIR):
+            os.mkdir(Loss_DIR)
+        with tf.device('/device:GPU:0'):
+        #with tf.device('/cpu:0'):
+            with tf.Session() as sess:
+                saver = tf.train.Saver()
+                ckpt = tf.train.get_checkpoint_state(os.path.dirname(DIR + '/checkpoint'))
 
-            if ckpt and ckpt.model_checkpoint_path:
-                saver.restore(sess, ckpt.model_checkpoint_path)
-            else:
-                sess.run(tf.global_variables_initializer())
-            for i in xrange(config.iterations):
-                total_loss=0
-                for x_batch, sequence_lengths, y_batch, answer_position in nextIteration(df['Paragraph'].values, df['Answer'].values, df['Start position'].values, df['End position'].values, config.BATCH_SIZE):
-                    # encoder_final_state=self.encoder(x_batch)
-                    # decoder_outputs_ta, decoder_final_state, _=self.decoder(encoder_final_state)
-                    # cross_entorpy_loss, train_op=self.loss(decoder_outputs_ta)
-                    feed_dict={
-                        model.input_placeholder: x_batch,
-                        model.input_length_placeholder:sequence_lengths,
-                        model.answer_position:answer_position,
-                        model.labels_placeholder:y_batch
-                    }
-                    _, batch_loss=sess.run([model.train_op, model.cross_entorpy_loss],feed_dict)
-                    if total_loss==0:
-                        total_loss=batch_loss
-                    else:
-                        total_loss= total_loss + batch_loss
-                #train_writer.add_summary(batch_loss, i)
-                if (i + 1) % 10 == 0:
-                    saver.save(sess, DIR+'/qglstmrnn', global_step=model.global_step)
-                print "Loss at iteration %d : %f" %(i,total_loss)
-
+                if ckpt and ckpt.model_checkpoint_path:
+                    saver.restore(sess, ckpt.model_checkpoint_path)
+                else:
+                    sess.run(tf.global_variables_initializer())
+                loss_list = []
+                iterations_list = []
+                for i in xrange(config.iterations):
+                    total_loss = 0
+                    for x_batch, sequence_lengths, y_batch, answer_position in nextIteration(df['Paragraph'].values,
+                                                                                             df['Answer'].values, df[
+                                                                                                 'Start position'].values,
+                                                                                             df['End position'].values,
+                                                                                             config.BATCH_SIZE):
+                        # encoder_final_state=self.encoder(x_batch)
+                        # decoder_outputs_ta, decoder_final_state, _=self.decoder(encoder_final_state)
+                        # cross_entorpy_loss, train_op=self.loss(decoder_outputs_ta)
+                        feed_dict = {
+                            model.input_placeholder: x_batch,
+                            model.input_length_placeholder: sequence_lengths,
+                            model.answer_position: answer_position,
+                            model.labels_placeholder: y_batch
+                        }
+                        _, batch_loss = sess.run([model.train_op, model.cross_entorpy_loss], feed_dict)
+                        total_loss = total_loss + batch_loss
+                        loss_list.append(total_loss)
+                        iterations_list.append(i)
+                    if (i + 1) % 10 == 0:
+                        saver.save(sess, DIR + '/qglstmrnn', global_step=model.global_step)
+                        if (i + 1) % 50 == 0:
+                            # save image
+                            plt.plot(iterations_list, loss_list)
+                            plt.savefig(Loss_DIR + "/loss at iteration %d" % (i) + ".png")
+                    print "Loss at iteration %d : %f" % (i, total_loss)
 
 
 def main():
-    qg=QG()
+    qg = QG()
     qg.run()
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     main()

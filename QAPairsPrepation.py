@@ -6,7 +6,7 @@ import copy
 import pip
 import requests
 
-os.environ["CORENLP_HOME"]="./CoreNLP/stanford-corenlp-full-2018-02-27/"
+os.environ["CORENLP_HOME"]="./CoreNLP/stanford-corenlp-full-2018-10-05/"
 Data_DIR="./Data"
 
 

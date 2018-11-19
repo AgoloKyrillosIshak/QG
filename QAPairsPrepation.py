@@ -11,6 +11,8 @@ Data_DIR="./Data"
 
 
 def downloadSQuADDataset():
+    if not os.path.isdir(Data_DIR):
+        os.mkdir(Data_DIR)
     print "Downloading SQuAD dataset..."
     response = requests.get('https://rajpurkar.github.io/SQuAD-explorer/dataset/train-v2.0.json')
     if response.status_code>=200 and response.status_code<300:
@@ -20,8 +22,6 @@ def downloadSQuADDataset():
 
 
 def extractSentences():
-    if not os.path.isdir(Data_DIR):
-        os.mkdir(Data_DIR)
     with corenlp.CoreNLPClient(timeout=100000) as client:
         with open(Data_DIR+"/"+'Sentences.csv', 'wb') as outcsv:
             writer = csv.writer(outcsv)

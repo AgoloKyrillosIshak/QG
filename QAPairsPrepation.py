@@ -38,6 +38,8 @@ def extractSentences():
                         sentences=ann.sentence
                         sentences_size=len(sentences)
                         for question in paragraph['qas']:
+                            if len(question['answers'])==0:
+                                continue
                             answer_position=question['answers'][0]['answer_start']
                             answer_text=question['answers'][0]['text']
                             len_accumelator=0

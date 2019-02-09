@@ -24,8 +24,8 @@ def downloadSQuADDataset():
 def extractSentences():
     with corenlp.CoreNLPClient(timeout=100000) as client:
         with open(Data_DIR+"/"+'Sentences.csv', 'wb') as outcsv:
-            writer = csv.writer(outcsv)
-            writer.writerow(["Sentence", "Processed Sentence ", "Answer", "question"])
+            #writer = csv.writer(outcsv)
+            outcsv.write("Sentence|Processed Sentence|Answer|question")
             with open(Data_DIR+"/"+'train-v2.0.json') as json_file:
                 data = json.load(json_file)
                 topic_list = data['data']
@@ -62,7 +62,7 @@ def extractSentences():
                                 sentence_string = corenlp.to_text(sent).encode('ascii', 'ignore')
                                 if len_accumelator + len(sentence_string) > answer_position:
                                     #dataset = (sentence_string,corenlp.to_text(modifiedSent),question['answers'][0]['text'], question['question'])
-                                    writer.writerow([sentence_string,corenlp.to_text(modifiedSent).encode('ascii', 'ignore'),question['answers'][0]['text'].encode('ascii', 'ignore'), question['question'].encode('ascii', 'ignore')])
+                                    outcsv.write(sentence_string+'|'+corenlp.to_text(modifiedSent).encode('ascii', 'ignore')+'|'+question['answers'][0]['text'].encode('ascii', 'ignore')+'|'+ question['question'].encode('ascii', 'ignore'))
 
                                 len_accumelator+=len(sentence_string)+1
 
